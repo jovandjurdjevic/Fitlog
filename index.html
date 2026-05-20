@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitnes Kalendar</title>
+    <!-- Pametno keširanje i simulacija mobilne aplikacije -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0d0d0d;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        .phone-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 450px;
+            background-color: #141414;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        @media (min-width: 450px) {
+            .phone-container {
+                height: 760px;
+                border-radius: 40px;
+                box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+                border: 10px solid #2b2b2b;
+            }
+        }
+
+        .app-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 20px 5px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+
+        .app-header {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-stats-trigger {
+            background: rgba(0, 191, 165, 0.1);
+            border: 1px solid rgba(0, 191, 165, 0.2);
+            color: #00BFA5;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .calendar-section {
+            padding: 10px 15px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5px;
+            font-size: 16px;
+            font-weight: 800;
+            color: #00E676;
+            letter-spacing: 1px;
+        }
+
+        .chevron {
+            cursor: pointer;
+            color: rgba(255,255,255,0.3);
+            font-size: 24px;
+            padding: 5px 15px;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            row-gap: 10px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .day-wrapper {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .day {
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .day.selected {
+            background-color: #00BFA5 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(0, 191, 165, 0.6);
+        }
+
+        .day-wrapper.has-data::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            width: 5px;
+            height: 5px;
+            background-color: #00E676;
+            border-radius: 50%;
+        }
+
+        .details-panel {
+            flex: 1;
+            background-color: #181818;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+            border-top: 1px solid rgba(255,255,255,0.03);
+            margin-bottom: env(safe-area-inset-bottom);
+        }
+
+        .details-title {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 12px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+        }
+
+        .workout-item {
+            background: rgba(255,255,255,0.02);
+            padding: 12px 14px;
+            border-radius: 14px;
+            border-left: 4px solid #00BFA5;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .sub-details {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(90deg, #00E676 0%, #00BFA5 100%);
+            color: #000000;
+            border: none;
+            padding: 15px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(10, 10, 10, 0.96);
+            backdrop-filter: blur(15px);
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .type-chip {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .type-chip.active {
+            background: rgba(0, 191, 165, 0.08);
+            border-color: #00BFA5;
+        }
+
+        .chip-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.25);
+        }
+        .type-chip.active .chip-dot {
+            border-color: #00BFA5; background-color: #00BFA5;
+        }
+
+        .muscle-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 4px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .muscle-grid.active { display: grid; }
+
+        .muscle-chip {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .muscle-chip.selected {
+            background: rgba(0, 230, 118, 0.1);
+            border-color: #00E676;
+            color: #00E676;
+        }
+
+        .dropdown-select, .text-input-custom {
+            width: 100%; padding: 10px;
+            background-color: #181818; color: white;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; margin-top: 5px; outline: none;
+            font-size: 13px; box-sizing: border-box;
+        }
+
+        .muscle-group-block {
+            background: rgba(255,255,255,0.005);
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 14px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .muscle-group-block h3 {
+            margin: 0 0 8px 0; font-size: 13px; color: #00E676;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .exercise-row-card {
+            background: rgba(255,255,255,0.015);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn-delete-exercise {
+            background: rgba(255, 23, 68, 0.08);
+            color: #ff1744;
+            border: 1px solid rgba(255, 23, 68, 0.15);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label {
+            font-size: 9px; color: rgba(255,255,255,0.35); margin-bottom: 4px; text-transform: uppercase; text-align: center;
+        }
+        .input-group input {
+            background: #111; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px; padding: 8px; color: white; text-align: center; outline: none; font-size: 12px;
+            width: 100%; box-sizing: border-box;
+        }
+
+        .btn-add-exercise {
+            background: rgba(0, 191, 165, 0.06);
+            color: #00BFA5;
+            border: 1px dashed rgba(0,191,165,0.4);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .chart-box {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 14px;
+            box-sizing: border-box;
+        }
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            margin-top: 10px;
+        }
+
+        .modal-buttons { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.02);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.5); cursor: pointer; padding: 12px; border-radius: 12px; flex: 1; font-size: 13px; font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #00BFA5; color: black; border: none;
+            cursor: pointer; padding: 12px; border-radius: 12px; flex: 1; font-size: 13px; font-weight: bold;
+        }
+
+        .disabled-section { opacity: 0.2; pointer-events: none; }
+        #swipeZone { width: 100%; touch-action: pan-y; }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <div class="app-header-container">
+        <div class="app-header">FITNES KALENDAR</div>
+        <button class="btn-stats-trigger" onclick="openStatsModal()">📊 Statistika</button>
+    </div>
+    
+    <div class="calendar-section">
+        <div class="calendar-header">
+            <span class="chevron" onclick="changeMonth(-1)">‹</span>
+            <span id="monthYearTitle">MAJ 2026.</span>
+            <span class="chevron" onclick="changeMonth(1)">›</span>
+        </div>
+        <div id="swipeZone">
+            <div class="weekdays">
+                <div>PO</div><div>UT</div><div>SR</div><div>ČE</div><div>PE</div><div>SU</div><div>NE</div>
+            </div>
+            <div class="days-grid" id="daysGrid"></div>
+        </div>
+    </div>
+
+    <div class="details-panel">
+        <div>
+            <div class="details-title" id="panelDateTitle">AKTIVNOSTI</div>
+            <div id="workoutContent">Učitavanje...</div>
+        </div>
+        <button class="btn-gradient" onclick="openStep1()">
+            <span>ZAPIŠI / IZMENI TRENING</span> <span>📝</span>
+        </button>
+    </div>
+
+    <!-- KORAK 1 -->
+    <div class="modal-overlay" id="modalStep1">
+        <div class="modal-scroll-area">
+            <div class="modal-title">Korak 1: Tip Treninga</div>
+            <div class="type-chip" id="chipRest" onclick="toggleChip('Rest')">
+                <span>😴 Slobodan dan / Odmor</span><div class="chip-dot"></div>
+            </div>
+            <div id="workoutFormGroup">
+                <span class="section-label">Tipovi treninga</span>
+                <div class="type-chip" id="chipWeight" onclick="toggleChip('Weight')">
+                    <span>🏋️‍♂️ Težinski Trening</span><div class="chip-dot"></div>
+                </div>
+                
+                <div class="muscle-grid" id="muscleGridBox">
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Grudi')">Grudi</div>
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Leđa')">Leđa</div>
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Ramena')">Ramena</div>
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Noge')">Noge</div>
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Ruke')">Ruke</div>
+                    <div class="muscle-chip" onclick="toggleMuscle(this, 'Stomak')">Stomak</div>
+                </div>
+                
+                <div class="type-chip" id="chipCardio" onclick="toggleChip('Cardio')">
+                    <span>🏃‍♂️ Kardio Trening</span><div class="chip-dot"></div>
+                </div>
+                <div style="display:none; margin-bottom: 10px;" id="cardioBox">
+                    <select class="dropdown-select" id="cardioDropdown">
+                        <option value="default" disabled selected>Odaberi vrstu treninga</option>
+                        <option value="Boks">🥊 Boks</option>
+                        <option value="Trčanje">🏃 Trčanje</option>
+                        <option value="Plivanje">🏊 Plivanje</option>
+                        <option value="Bicikl">🚴 Bicikl</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="closeModal('modalStep1')">Otkaži</button>
+            <button class="btn-primary" id="btnNextStep" onclick="goToStep2()">Nastavi →</button>
+        </div>
+    </div>
+
+    <!-- KORAK 2 -->
+    <div class="modal-overlay" id="modalStep2">
+        <div class="modal-scroll-area">
+            <div class="modal-title">Korak 2: Detalji Treninga</div>
+            <div id="dynamicSpecsContainer"></div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="backToStep1()">← Nazad</button>
+            <button class="btn-primary" onclick="saveEverything()">Sačuvaj</button>
+        </div>
+    </div>
+
+    <!-- STATISTIKA -->
+    <div class="modal-overlay" id="modalStats">
+        <div class="modal-scroll-area">
+            <div class="modal-title">📈 Analitika & Napredak</div>
+            
+            <div class="chart-box">
+                <span class="section-label">Praćenje radne kilaže</span>
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                    <select class="dropdown-select" id="statsMuscleSelect" onchange="updateStatsExerciseOptions()" style="margin-top:0; flex:1; font-size:11px; padding:6px;">
+                        <option value="Grudi">Grudi</option>
+                        <option value="Leđa">Leđa</option>
+                        <option value="Ramena">Ramena</option>
+                        <option value="Noge">Noge</option>
+                        <option value="Ruke">Ruke</option>
+                        <option value="Stomak">Stomak</option>
+                    </select>
+                    <select class="dropdown-select" id="statsExerciseSelect" onchange="renderStrengthChart()" style="margin-top:0; flex:1.5; font-size:11px; padding:6px;">
+                    </select>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="strengthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <span class="section-label">Praćenje kardio napretka</span>
+                <select class="dropdown-select" id="statsCardioSelect" onchange="renderCardioChart()" style="margin-top:2px; font-size:11px; padding:6px;">
+                    <option value="Trčanje">🏃 Trčanje</option>
+                    <option value="Bicikl">🚴 Bicikl</option>
+                    <option value="Plivanje">🏊 Plivanje</option>
+                    <option value="Boks">🥊 Boks</option>
+                </select>
+                <div class="chart-wrapper">
+                    <canvas id="cardioChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <span class="section-label">Odnos vrsta treninga (Ukupno)</span>
+                <div class="chart-wrapper" style="height: 130px; display: flex; justify-content: center;">
+                    <canvas id="ratioChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-primary" onclick="closeModal('modalStats')" style="width: 100%;">Zatvori statistiku</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const exerciseDatabase = {
+        "Grudi": ["Benc pres", "Kosi potisak", "Razvlačenje bučicama", "Propadanja", "Sklekovi"],
+        "Leđa": ["Zgibovi", "Lat mašina", "Veslanje u pretklonu", "Mrtvo dizanje"],
+        "Ramena": ["Vojnički potisak", "Lateralno podizanje", "Prednje podizanje"],
+        "Noge": ["Čučnjevi", "Leg pres", "Iskorak", "Listovi"],
+        "Ruke": ["Pregib bučicama", "Dvoručni pregib", "Triceps ekstenzija"],
+        "Stomak": ["Trbušnjaci", "Plank", "Podizanje nogu"]
+    };
+
+    const monthsNames = ["JANUAR", "FEBRUAR", "MART", "APRIL", "MAJ", "JUN", "JUL", "AVGUST", "SEPTEMBAR", "OKTOBAR", "NOVEMBAR", "DECEMBAR"];
+    
+    // Učitavanje iz localStorage-a ili korišćenje demo podataka ako je prazno
+    let database = JSON.parse(localStorage.getItem('fitnessCalendarDB'));
+    if (!database) {
+        database = {
+            "2026-4-1": { isRestDay: false, hasWeight: true, hasCardio: false, muscles: ["Grudi"], weightSpecs: [{group:"Grudi", exercise:"Benc pres", sets:4, reps:10, weight:70}] },
+            "2026-4-3": { isRestDay: false, hasWeight: false, hasCardio: true, cardioType:"Trčanje", cardioSpecs:{time:25, distance:4} },
+            "2026-4-20": { isRestDay: false, hasWeight: true, hasCardio: false, muscles: ["Grudi"], weightSpecs: [{group:"Grudi", exercise:"Benc pres", sets:4, reps:8, weight:77.5}] }
+        };
+        localStorage.setItem('fitnessCalendarDB', JSON.stringify(database));
+    }
+
+    // Automatski postavi na trenutni mesec i dan na osnovu realnog vremena
+    const realDate = new Date();
+    let currentMonth = realDate.getMonth(); 
+    let currentYear = realDate.getFullYear(); 
+    let selectedDay = realDate.getDate();
+    
+    let mRest = false; let mWeight = false; let mCardio = false; let mMuscles = [];
+    let strengthChartInstance = null; let cardioChartInstance = null; let ratioChartInstance = null;
+
+    function saveDB() {
+        localStorage.setItem('fitnessCalendarDB', JSON.stringify(database));
+    }
+
+    function renderCalendar() {
+        document.getElementById('monthYearTitle').innerText = `${monthsNames[currentMonth]} ${currentYear}.`;
+        const grid = document.getElementById('daysGrid'); grid.innerHTML = '';
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        const startSpaces = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        for (let i = 0; i < startSpaces; i++) grid.appendChild(document.createElement('div'));
+        for (let day = 1; day <= totalDays; day++) {
+            const wrapper = document.createElement('div'); wrapper.classList.add('day-wrapper');
+            if(database[`${currentYear}-${currentMonth}-${day}`]) wrapper.classList.add('has-data');
+            const dayBtn = document.createElement('div'); dayBtn.classList.add('day'); dayBtn.innerText = day;
+            if (day === selectedDay) dayBtn.classList.add('selected');
+            dayBtn.onclick = () => { selectedDay = day; renderCalendar(); };
+            wrapper.appendChild(dayBtn); grid.appendChild(wrapper);
+        }
+        updatePanel();
+    }
+
+    function changeMonth(direction) {
+        currentMonth += direction; if (currentMonth > 11) { currentMonth = 0; currentYear++; } else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        selectedDay = 1; renderCalendar();
+    }
+
+    function updatePanel() {
+        document.getElementById('panelDateTitle').innerText = `AKTIVNOSTI ZA ${selectedDay}. ${monthsNames[currentMonth].substring(0,3)}`;
+        const content = document.getElementById('workoutContent');
+        const log = database[`${currentYear}-${currentMonth}-${selectedDay}`];
+        if (!log) { content.innerHTML = '<div style="color: rgba(255,255,255,0.2); font-size: 14px;">Nema aktivnosti.</div>'; return; }
+        if (log.isRestDay) { content.innerHTML = '<div class="workout-item"><span>😴</span> <span>Odmor / Slobodan dan</span></div>'; return; }
+
+        let html = '';
+        if (log.hasWeight) {
+            let subHtml = '';
+            log.weightSpecs.forEach(s => {
+                subHtml += `<div class="sub-details">└ <b>${s.group}</b> - ${s.exercise}: ${s.sets}s × ${s.reps}p (${s.weight}kg)</div>`;
+            });
+            html += `<div class="workout-item"><span>🏋️‍♂️</span> <span>Težinski Trening</span>${subHtml}</div>`;
+        }
+        if (log.hasCardio) {
+            let subCardio = log.cardioType === 'Boks' ? `└ Runde: ${log.cardioSpecs.rounds} | Vreme: ${log.cardioSpecs.duration} min` : `└ Vreme: ${log.cardioSpecs.time} min | Dist: ${log.cardioSpecs.distance} km`;
+            html += `<div class="workout-item"><span>🏃‍♂️</span> <span>Kardio: ${log.cardioType}</span><div class="sub-details">${subCardio}</div></div>`;
+        }
+        content.innerHTML = html;
+    }
+
+    function openStep1() {
+        document.getElementById('modalStep1').style.display = 'flex';
+        const log = database[`${currentYear}-${currentMonth}-${selectedDay}`] || { isRestDay: false, hasWeight: false, hasCardio: false, muscles: [], cardioType: 'default' };
+        mRest = log.isRestDay; mWeight = log.hasWeight; mCardio = log.hasCardio; mMuscles = [...log.muscles];
+        document.getElementById('cardioDropdown').value = log.cardioType || 'default';
+        refreshStep1UI();
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function backToStep1() { closeModal('modalStep2'); document.getElementById('modalStep1').style.display = 'flex'; }
+
+    function toggleChip(type) {
+        if (type === 'Rest') { mRest = !mRest; if (mRest) { mWeight = false; mCardio = false; mMuscles = []; } }
+        else if (type === 'Weight') { if (!mRest) mWeight = !mWeight; }
+        else if (type === 'Cardio') { if (!mRest) mCardio = !mCardio; }
+        refreshStep1UI();
+    }
+
+    function toggleMuscle(el, muscle) {
+        if (mMuscles.includes(muscle)) mMuscles = mMuscles.filter(m => m !== muscle); else mMuscles.push(muscle);
+        refreshStep1UI();
+    }
+
+    function refreshStep1UI() {
+        document.getElementById('chipRest').classList.toggle('active', mRest);
+        document.getElementById('chipWeight').classList.toggle('active', mWeight);
+        document.getElementById('chipCardio').classList.toggle('active', mCardio);
+        document.getElementById('workoutFormGroup').classList.toggle('disabled-section', mRest);
+        document.getElementById('muscleGridBox').style.display = mWeight ? 'grid' : 'none';
+        document.getElementById('cardioBox').style.display = mCardio ? 'block' : 'none';
+        document.querySelectorAll('.muscle-chip').forEach(chip => chip.classList.toggle('selected', mMuscles.includes(chip.innerText)));
+        document.getElementById('btnNextStep').innerText = (mRest || (!mWeight && !mCardio)) ? "Sačuvaj odmah" : "Nastavi →";
+    }
+
+    function goToStep2() {
+        if (mRest || (!mWeight && !mCardio)) { saveEverything(); return; }
+        closeModal('modalStep1'); document.getElementById('modalStep2').style.display = 'flex';
+        buildDynamicSpecsForm();
+    }
+
+    function buildDynamicSpecsForm() {
+        const container = document.getElementById('dynamicSpecsContainer'); container.innerHTML = '';
+        const log = database[`${currentYear}-${currentMonth}-${selectedDay}`];
+        const currentCardioSelected = document.getElementById('cardioDropdown').value;
+
+        if (mWeight && mMuscles.length > 0) {
+            mMuscles.forEach(group => {
+                const groupBlock = document.createElement('div');
+                groupBlock.classList.add('muscle-group-block');
+                groupBlock.setAttribute('data-muscle-group', group);
+                
+                groupBlock.innerHTML = `
+                    <h3><span>🏋️‍♂️ ${group}</span> <button class="btn-add-exercise" onclick="addExerciseRow('${group}', '', 4, 12, 60)">+ Dodaj</button></h3>
+                    <div class="rows-container"></div>
+                `;
+                container.appendChild(groupBlock);
+
+                if (log && log.weightSpecs && log.weightSpecs.some(s => s.group === group)) {
+                    log.weightSpecs.filter(s => s.group === group).forEach(s => {
+                        addExerciseRow(group, s.exercise, s.sets, s.reps, s.weight);
+                    });
+                } else {
+                    addExerciseRow(group, '', 4, 12, 60);
+                }
+            });
+        }
+
+        if (mCardio && currentCardioSelected !== 'default') {
+            container.innerHTML += `<span class="section-label">🏃‍♂️ Kardio (${currentCardioSelected})</span>`;
+            if (currentCardioSelected === 'Boks') {
+                const savedBoks = log?.cardioSpecs || { rounds: 3, duration: 9 };
+                container.innerHTML += `
+                    <div class="exercise-row-card">
+                        <div class="stats-row">
+                            <div class="input-group"><label>Runde</label><input type="number" id="cardio_rounds" value="${savedBoks.rounds}"></div>
+                            <div class="input-group"><label>Trajanje (m)</label><input type="number" id="cardio_duration" value="${savedBoks.duration}"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const savedOther = log?.cardioSpecs || { time: 30, distance: 5 };
+                container.innerHTML += `
+                    <div class="exercise-row-card">
+                        <div class="stats-row">
+                            <div class="input-group"><label>Minuti</label><input type="number" id="cardio_time" value="${savedOther.time}"></div>
+                            <div class="input-group"><label>KM</label><input type="number" id="cardio_distance" value="${savedOther.distance}"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    function addExerciseRow(group, savedExercise, sets, reps, weight) {
+        const block = document.querySelector(`.muscle-group-block[data-muscle-group="${group}"] .rows-container`);
+        const row = document.createElement('div');
+        row.classList.add('exercise-row-card');
+
+        let options = `<option value="" disabled ${savedExercise === '' ? 'selected' : ''}>Izaberi vežbu</option>`;
+        let isCustom = savedExercise !== '' && (!exerciseDatabase[group] || !exerciseDatabase[group].includes(savedExercise));
+
+        if (exerciseDatabase[group]) {
+            exerciseDatabase[group].forEach(ex => {
+                options += `<option value="${ex}" ${savedExercise === ex ? 'selected' : ''}>${ex}</option>`;
+            });
+        }
+        options += `<option value="CUSTOM" ${isCustom ? 'selected' : ''}>✍️ Unesi sam...</option>`;
+
+        row.innerHTML = `
+            <div style="display:flex; justify-content:space-between; gap:4px; align-items:center; width:100%;">
+                <select class="dropdown-select inp-exercise" onchange="handleExerciseDropdownChange(this)" style="${isCustom ? 'display:none;' : ''}">
+                    ${options}
+                </select>
+                <input type="text" class="text-input-custom" placeholder="Naziv vežbe" value="${isCustom ? savedExercise : ''}" style="${isCustom ? 'display:block; margin-top:0;' : 'display:none;'}">
+                <button class="btn-delete-exercise" onclick="this.closest('.exercise-row-card').remove()">X</button>
+            </div>
+            <div class="stats-row">
+                <div class="input-group"><label>Serije</label><input type="number" class="inp-sets" value="${sets}"></div>
+                <div class="input-group"><label>Ponavljanja</label><input type="number" class="inp-reps" value="${reps}"></div>
+                <div class="input-group"><label>Kilaža</label><input type="number" class="inp-weight" value="${weight}"></div>
+            </div>
+        `;
+        block.appendChild(row);
+    }
+
+    function handleExerciseDropdownChange(select) {
+        if (select.value === 'CUSTOM') {
+            select.style.display = 'none';
+            const textInput = select.closest('.exercise-row-card').querySelector('.text-input-custom');
+            textInput.style.display = 'block';
+            textInput.focus();
+        }
+    }
+
+    function saveEverything() {
+        const dbKey = `${currentYear}-${currentMonth}-${selectedDay}`;
+        const finalCardioType = document.getElementById('cardioDropdown').value;
+        if (!mRest && !mWeight && !mCardio) { delete database[dbKey]; saveDB(); closeModal('modalStep1'); closeModal('modalStep2'); renderCalendar(); return; }
+
+        let weightSpecsArray = [];
+        if (mWeight) {
+            document.querySelectorAll('.muscle-group-block').forEach(block => {
+                const groupName = block.getAttribute('data-muscle-group');
+                block.querySelectorAll('.exercise-row-card').forEach(card => {
+                    const selectEl = card.querySelector('.dropdown-select');
+                    const textEl = card.querySelector('.text-input-custom');
+                    
+                    let exerciseName = "Opšta vežba";
+                    if (textEl.style.display === 'block' && textEl.value.trim() !== '') {
+                        exerciseName = textEl.value.trim();
+                    } else if (selectEl.value && selectEl.value !== 'CUSTOM') {
+                        exerciseName = selectEl.value;
+                    }
+
+                    weightSpecsArray.push({
+                        group: groupName,
+                        exercise: exerciseName,
+                        sets: parseFloat(card.querySelector('.inp-sets').value) || 0,
+                        reps: parseFloat(card.querySelector('.inp-reps').value) || 0,
+                        weight: parseFloat(card.querySelector('.inp-weight').value) || 0
+                    });
+                });
+            });
+        }
+
+        let cardioSpecsObj = {};
+        if (mCardio) {
+            if (finalCardioType === 'Boks') {
+                cardioSpecsObj = { rounds: parseFloat(document.getElementById('cardio_rounds')?.value) || 0, duration: parseFloat(document.getElementById('cardio_duration')?.value) || 0 };
+            } else {
+                cardioSpecsObj = { time: parseFloat(document.getElementById('cardio_time')?.value) || 0, distance: parseFloat(document.getElementById('cardio_distance')?.value) || 0 };
+            }
+        }
+
+        database[dbKey] = { isRestDay: mRest, hasWeight: mWeight, hasCardio: mCardio, muscles: mMuscles, cardioType: finalCardioType, weightSpecs: weightSpecsArray, cardioSpecs: cardioSpecsObj };
+        saveDB(); closeModal('modalStep1'); closeModal('modalStep2'); renderCalendar();
+    }
+
+    function openStatsModal() {
+        document.getElementById('modalStats').style.display = 'flex';
+        updateStatsExerciseOptions(); renderCardioChart(); renderRatioChart();
+    }
+
+    function updateStatsExerciseOptions() {
+        const selectedMuscle = document.getElementById('statsMuscleSelect').value;
+        const exerciseSelect = document.getElementById('statsExerciseSelect');
+        exerciseSelect.innerHTML = '';
+        let options = [...exerciseDatabase[selectedMuscle]];
+
+        Object.values(database).forEach(log => {
+            if (log.hasWeight && log.weightSpecs) {
+                log.weightSpecs.forEach(spec => {
+                    if (spec.group === selectedMuscle && !options.includes(spec.exercise)) {
+                        options.push(spec.exercise);
+                    }
+                });
+            }
+        });
+
+        options.forEach(ex => {
+            const opt = document.createElement('option');
+            opt.value = ex; opt.innerText = ex; exerciseSelect.appendChild(opt);
+        });
+        renderStrengthChart();
+    }
+
+    function renderStrengthChart() {
+        const muscle = document.getElementById('statsMuscleSelect').value;
+        const exercise = document.getElementById('statsExerciseSelect').value;
+        let chartData = [];
+        
+        Object.keys(database).sort().forEach(key => {
+            const log = database[key];
+            if (log.hasWeight && log.weightSpecs) {
+                log.weightSpecs.forEach(spec => {
+                    if (spec.group === muscle && spec.exercise === exercise) {
+                        const parts = key.split('-');
+                        const labelDate = `${parts[2]}. ${monthsNames[parseInt(parts[1])].substring(0,3)}`;
+                        chartData.push({ date: labelDate, weight: spec.weight });
+                    }
+                });
+            }
+        });
+
+        const ctx = document.getElementById('strengthChart').getContext('2d');
+        if (strengthChartInstance) { strengthChartInstance.destroy(); }
+        const labels = chartData.length > 0 ? chartData.map(d => d.date) : ["Nema unosa"];
+        const weights = chartData.length > 0 ? chartData.map(d => d.weight) : [0];
+
+        strengthChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: weights, borderColor: '#00E676', backgroundColor: 'rgba(0, 230, 118, 0.1)', borderWidth: 2, tension: 0.3, fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }, grid: { display: false } },
+                    y: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+
+    function renderCardioChart() {
+        const selectedCardio = document.getElementById('statsCardioSelect').value;
+        let chartData = [];
+
+        Object.keys(database).sort().forEach(key => {
+            const log = database[key];
+            if (log.hasCardio && log.cardioType === selectedCardio && log.cardioSpecs) {
+                const parts = key.split('-');
+                const labelDate = `${parts[2]}. ${monthsNames[parseInt(parts[1])].substring(0,3)}`;
+                let value = selectedCardio === 'Boks' ? log.cardioSpecs.rounds : log.cardioSpecs.distance;
+                chartData.push({ date: labelDate, val: value });
+            }
+        });
+
+        const ctx = document.getElementById('cardioChart').getContext('2d');
+        if (cardioChartInstance) { cardioChartInstance.destroy(); }
+        const labels = chartData.length > 0 ? chartData.map(d => d.date) : ["Nema unosa"];
+        const values = chartData.length > 0 ? chartData.map(d => d.val) : [0];
+
+        cardioChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values, borderColor: '#00BFA5', backgroundColor: 'rgba(0, 191, 165, 0.1)', borderWidth: 2, tension: 0.3, fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }, grid: { display: false } },
+                    y: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+
+    function renderRatioChart() {
+        let weightCount = 0; let cardioCount = 0; let restCount = 0;
+        Object.values(database).forEach(log => {
+            if (log.isRestDay) restCount++;
+            else { if (log.hasWeight) weightCount++; if (log.hasCardio) cardioCount++; }
+        });
+        const total = weightCount + cardioCount + restCount;
+
+        const ctx = document.getElementById('ratioChart').getContext('2d');
+        if (ratioChartInstance) { ratioChartInstance.destroy(); }
+
+        ratioChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: [`Težinski: ${weightCount}x`, `Kardio: ${cardioCount}x`, `Odmor: ${restCount}x`],
+                datasets: [{ data: [weightCount, cardioCount, restCount], backgroundColor: ['#00BFA5', '#00E676', '#ff1744'], borderWidth: 0 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#fff', font: { size: 11, weight: 'bold' } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                let percentage = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                                return ` ${context.label.split(':')[0]}: ${percentage}% (${value} puta)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // SWIPE ENGINE
+    let touchStartX = 0; let touchEndX = 0;
+    const swipeZone = document.getElementById('swipeZone');
+
+    swipeZone.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; }, false);
+    swipeZone.addEventListener('touchend', function(e) { touchEndX = e.changedTouches[0].screenX; handleSwipeGesture(); }, false);
+
+    function handleSwipeGesture() {
+        const swipeThreshold = 50;
+        if (touchStartX - touchEndX > swipeThreshold) changeMonth(1);
+        else if (touchEndX - touchStartX > swipeThreshold) changeMonth(-1);
+    }
+
+    renderCalendar();
+</script>
+</body>
+</html>
